@@ -7,3 +7,6 @@ The iOS code is written in Swift 2, targeting iOS9 (but should work on earlier v
 
 # Arduino sketch
 Coming soon...
+
+## Arduino code
+The code for the Arduino board and the libraries are included in the `Arduino` folder.
