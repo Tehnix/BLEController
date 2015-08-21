@@ -5,30 +5,22 @@
 //  Created by Christian Kjær Laustsen on 20/08/15.
 //  Copyright © 2015 codetalk. All rights reserved.
 //
-
 import UIKit
 import CoreBluetooth
 
 
 class ScanTableViewController: UITableViewController {
     
-    var bleController: BLE?
+    var ble: BLE = BLE()
     
     var devices: [CBPeripheral] = []
+    
+    var keepScanningForDevices: Bool = true
+    
+    var scanningTimer: NSTimer?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.bleController = BLE()
-        // Perform a scan a bit delayed form the load, since the Central Manager
-        // isn't powered on yet.
-        let seconds = 0.5
-        dispatch_after(
-            dispatch_time(DISPATCH_TIME_NOW, Int64(seconds * Double(NSEC_PER_SEC))),
-            dispatch_get_main_queue(),
-            {
-                self.scanForDevices()
-            }
-        )
     }
 
     override func didReceiveMemoryWarning() {
@@ -36,19 +28,34 @@ class ScanTableViewController: UITableViewController {
     }
     
     override func viewDidAppear(animated: Bool) {
-        self.scanForDevices()
+        // When the view is shown, start scanning repeatedly
+        self.keepScanningForDevices = true
+        if self.scanningTimer == nil  {
+            print("[DEBUG] Starting main scanning timer")
+            self.scanningTimer = NSTimer.scheduledTimerWithTimeInterval(1.0, target: self, selector: Selector("scanForDevices"), userInfo: nil, repeats: true)
+        }
+    }
+    
+    override func viewWillDisappear(animated: Bool) {
+        // When the view dissapears, make sure we stop scanning
+        print("[DEBUG] Stopping main scanning timer")
+        self.scanningTimer?.invalidate()
+        self.scanningTimer = nil
+        self.keepScanningForDevices = false
     }
     
     func scanForDevices() {
-        if let ble = self.bleController {
-            ble.startScanning(3.0)
-            self.devices = ble.peripherals
+        // Start the scanner, and update the table with the list of peripherals
+        if self.keepScanningForDevices {
+            print("[DEBUG] Scanning for devices and updating table")
+            self.ble.startScanning(3.0)
+            self.devices = self.ble.peripherals
+            self.tableView.reloadData()
         }
-        self.tableView.reloadData()
     }
     
-    // Scan for BLE devices, and insert them into the table view
-    @IBAction func scanForDevices(sender: AnyObject) {
+    @IBAction func forceScanForDevices(sender: AnyObject) {
+        // For a scan for the devices
         self.scanForDevices()
     }
 
@@ -58,33 +65,41 @@ class ScanTableViewController: UITableViewController {
     }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        // The number of rows correspond to the number of devices found
         return self.devices.count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+        // Get the cell at the index
         let cell = tableView.dequeueReusableCellWithIdentifier("deviceListCell", forIndexPath: indexPath)
+        // Get the device at the same index as the cell
         let device = self.devices[indexPath.row]
+        let rssi = self.ble.peripheralRSSI[device]!
+        // Update the cell labels with the device information
         cell.textLabel!.text = device.name
-        cell.detailTextLabel!.text = "UUID: " + device.identifier.UUIDString
+        cell.detailTextLabel!.text = "RSSI: \(rssi)"
         return cell
     }
     
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        print(indexPath)
+        // When a cell is pushed, start the seque into the detail view
         performSegueWithIdentifier("showDeviceDetails", sender: nil)
     }
 
     // MARK: - Navigation
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "showDeviceDetails" {
+            // Get the view controller for the detail view
             let deviceViewController = segue.destinationViewController as! DeviceTableViewController
+            // Get the index of the cell that was pushed
             let indexPath: NSIndexPath = self.tableView.indexPathForSelectedRow!
             // Connect to the device
             let device = self.devices[indexPath.row]
-            bleController!.connectToPeripheral(device)
+            self.ble.connectToPeripheral(device)
             // Pass through the controller and device instances
-            deviceViewController.bleController = self.bleController
+            deviceViewController.ble = self.ble
             deviceViewController.bleDevice = device
+            deviceViewController.rssi = self.ble.peripheralRSSI[device]
         }
     }
 

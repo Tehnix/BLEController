@@ -27,6 +27,7 @@ class BLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     let RBL_CHAR_RX_UUID = "713D0003-503E-4C75-BA94-3148F18D941E"
     
     var delegate: BLEDelegate?
+    var peripheralRSSI = [CBPeripheral: NSNumber]()
     
     private      var centralManager:   CBCentralManager!
     private      var activePeripheral: CBPeripheral?
@@ -50,6 +51,9 @@ class BLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     func startScanning(timeout: Double) -> Bool {
         if self.centralManager.state != .PoweredOn {
             print("[ERROR] Couldn´t start scanning")
+            return false
+        } else if self.centralManager.isScanning {
+            print("[DEBUG] Already scanning")
             return false
         }
         print("[DEBUG] Scanning started")
@@ -149,6 +153,7 @@ class BLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         }
         
         self.peripherals.append(peripheral)
+        self.peripheralRSSI[peripheral] = RSSI
     }
     
     func centralManager(central: CBCentralManager, didFailToConnectPeripheral peripheral: CBPeripheral, error: NSError?) {
