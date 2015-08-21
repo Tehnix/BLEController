@@ -20,7 +20,7 @@ struct RBLProtocol {
     let messageTypeProtocolVersion: Character = "V"
     let messageTypePinCount: Character = "C"
     let messageTypePinCapability: Character = "P"
-    
+
     // Pin modes
     let unavailable = 0xFF
     let input = 0x00
@@ -28,10 +28,10 @@ struct RBLProtocol {
     let analog = 0x02
     let pwm = 0x03
     let servo = 0x04
-    
+
     // Pin types (analog is already defined above)
     let digital = 0x01
-    
+
     // Pin capabilities
     let pinCapabilityNone = 0x00
     let pinCapabilityDigital = 0x01
@@ -39,19 +39,13 @@ struct RBLProtocol {
     let pinCapabilityPWM = 0x04
     let pinCapabilityServo = 0x08
     let pinCapabilityI2C = 0x10
-    
+
     // Pin errors
     let pinErrorInvalidPin = 0x01
     let pinErrorInvalidMode = 0x02
-    
-    func digitalWrite(ble: BLE, pin: Int, value: RBLPinState) {
-        let p: [UInt8] = Array("T".utf8)
-        let data = NSData(bytes: p + [UInt8(pin), value.rawValue] as [UInt8], length: 3)
-        print("[DEBUG] Sending data: \(data)")
-        ble.write(data)
-    }
-    
+
     func write(ble: BLE, control: UInt8, value: RBLPinState) {
+        // Write bytes to the BLE device
         let data = NSData(bytes: [control, value.rawValue] as [UInt8], length: 3)
         print("[DEBUG] Sending raw data: \(data)")
         ble.write(data)
